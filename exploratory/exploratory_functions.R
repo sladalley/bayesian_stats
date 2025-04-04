@@ -85,7 +85,7 @@ summary_info = function(datFrm, yName, gName=NULL,
     
     # Defining groups names, if not given as parameter:
     if (is.null(groupNames))
-      groupNames = levels(factor(g))
+      groupNames = levels(as.factor(datFrm[,gName]))
     
     df = NULL
     rowNames = NULL
@@ -107,8 +107,8 @@ summary_info = function(datFrm, yName, gName=NULL,
 # It saves an image file if a file name is given.
 plot_boxplots = function(datFrm, yName, gName=NULL, sName=NULL, 
                          groupNames=NULL, connect=FALSE, plotTitle=NULL, 
-                         plotXlab=NULL, plotYlab=NULL, colors=NULL, 
-                         graphFileType="png", saveName=NULL) {
+                         plotXlab=NULL, plotYlab=NULL, plotSize=c(7,7), 
+                         colors=NULL, graphFileType="png", saveName=NULL) {
   # List of parameters:
   #   - datFrm: data set.
   #   - yName: name of the column with the data.
@@ -119,6 +119,8 @@ plot_boxplots = function(datFrm, yName, gName=NULL, sName=NULL,
   #   - plotTitle: title of the boxplot.
   #   - plotXlab: x label in the boxplot (groups/conditions).
   #   - plotYlab: y label in the boxplot (variable/value).
+  #   - plotSize: width and heigth of the graph with the boxplot.
+  #   - colors: color of the boxplot.
   #   - graphFileType: type of the image output files.
   #   - saveName: prefix of the output files.
   
@@ -144,7 +146,7 @@ plot_boxplots = function(datFrm, yName, gName=NULL, sName=NULL,
       colors = "#0088aa8a"
     
     # Plotting boxplots
-    openGraph(width=7,height=7)
+    openGraph(width=plotSize[1],height=plotSize[2])
     plot <- ggboxplot(datFrm[,yName], fill=colors, title=plotTitle, 
                       xlab=plotXlab,ylab=plotYlab) + theme(axis.text.x = element_blank())
     print(plot)
@@ -156,16 +158,16 @@ plot_boxplots = function(datFrm, yName, gName=NULL, sName=NULL,
     if (is.null(colors)) {
       colors = rep("#0088aa8a", nG)
     } else {
-      if (length(a) == 1) 
+      if (length(colors) == 1) 
         colors = rep(colors, nG)
     }
     
     # Defining group labels using data, if not given as parameter:
     if (is.null(groupNames))
-      groupNames = levels(factor(g))
+      groupNames = levels(as.factor(datFrm[,gName]))
     
     # Plotting boxplots:
-    openGraph(width=7,height=7)
+    openGraph(width=plotSize[1],height=plotSize[2])
     plot <- ggboxplot(datFrm, x=gName, y=yName, fill = gName,
                       palette = colors, title=plotTitle, 
                       xlab=plotXlab, ylab=plotYlab) + 
