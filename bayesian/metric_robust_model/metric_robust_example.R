@@ -20,7 +20,7 @@ yName = "resp"
 sName = "subID"
 
 # Choosing type of analysis ("paired" or "independent"):
-analysis = "independent"
+analysis = "paired"
 
 # Defining directory for results and prefix of the files names:
 fileNameRoot = "test"
@@ -38,18 +38,25 @@ subsEffsz = "" # subscript to identify the effect size expression (ex: "one-grou
 
 # Paired analysis (one group):
 if (analysis == "paired") {
-  datFrm = datFrmDiff
+  # Calculating differences
+  diff = data.frame(resp=integer(), cond=integer(), subID=integer())
+  for (subject in 1:nS) {
+    y1 = datFrm[datFrm$subID == subject & datFrm$cond == 1, yName]
+    y2 = datFrm[datFrm$subID == subject & datFrm$cond == 2, yName]
+    diff[nrow(diff) + 1,] <- c(y2 - y1, 1, subject)
+  }
+  datFrm = diff
   
   # Setting the null values and the ROPE intervals for each parameter:
-  nullHypValMu = 0.0 # null hypothesis value to calculate effect size
-  compValMu = 0.0 # real value to show in posterior plot
-  compValSigma = NULL # real value to show in posterior plot
-  compValNu = NULL # comparative value to show in posterior plot
-  compValEff = NULL # real value to show in posterior plot
+  compValMu = 0.0 # comparison value to show in plots of means
+  compValSigma = NULL # comparison value to show in plots of scales
+  compValNu = NULL # comparison value to show in plots of normality
+  compValEff = NULL # comparison value to show in plot of effect size
   ropeEffSz = c(-0.1, 0.1) 
-  # Extra parameters:
-  compValMuDiff = NULL
-  compValSigmaDiff = NULL
+  nullValEff = 0 # null value to calculate effect size
+  # Extra parameters (not used for the single group case):
+  compValMuDiff = NULL # comparison value to show in plot of means difference
+  compValSigmaDiff = NULL # comparison value to show in plot of scales difference
 }
 
 # Independent analysis (two groups):
@@ -61,6 +68,7 @@ if (analysis == "independent") {
   compValNu = NULL # comparison value to show in plots of normality
   compValEff = NULL # comparison value to show in plot of effect size
   ropeEffSz = c(-0.1, 0.1) # ROPE around the null value of effect size
+  # Extra parameters (not used for the two groups case):
   nullValEff = 0 # null value to calculate effect size
 }
 
