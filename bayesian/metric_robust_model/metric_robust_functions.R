@@ -21,8 +21,14 @@ genMCMC = function(datFrm, yName="y", gName="cond", muPrior, muSdPrior,
   #   - sigmaPriorHigh: high limit of the prior for the scale of each group (uniform dist.).
   #   - saveName: prefix of the output files.
   #-----------------------------------------------------------------------------
-  # ASSEMBLE THE DATA FOR JAGS.
+
+  # Creating group column if not existing:
+  if (is.null(gName)) {
+    datFrm = cbind(datFrm, group=rep(1,dim(datFrm)[1]))
+    gName = "group"
+  }
   
+  # ASSEMBLE THE DATA FOR JAGS.
   y = as.numeric(datFrm[,yName])
   # Do some checking that data make sense:
   if ( any( !is.finite(y) ) ) { stop("All y values must be finite.") }
@@ -108,7 +114,7 @@ genMCMC = function(datFrm, yName="y", gName="cond", muPrior, muSdPrior,
 
 # ====== Summary of data and diagnostics ======================================
 smryMCMC = function (codaSamples, nG, nullHypValMu=0, saveName=NULL, 
-                     diagnostics=TRUE, graphFileType="png") {
+                     diagnostics=TRUE, graphFileType="png", computeEffsz=TRUE) {
   # Compute summary statistics of the chain and generate diagnostics plot.
   # List of parameters:
   #   - codaSamples: codaSamples object with the MCMC chain.
@@ -117,6 +123,7 @@ smryMCMC = function (codaSamples, nG, nullHypValMu=0, saveName=NULL,
   #   - saveName: prefix of the output files.
   #   - diagnostics: to define if it should generate diagnostics plots.
   #   - graphFileType: type of the image output files.
+  #   - computeEffsz: if effect size should be calculated (TRUE) or not (FALSE)
   # --------------------------------------------------------------------------- #
   # SUMMARIZING THE MCMC POSTERIOR.
   
@@ -140,10 +147,12 @@ smryMCMC = function (codaSamples, nG, nullHypValMu=0, saveName=NULL,
                          "log10(nu)" = summarizePost( log10(mcmcMat[,"nu"]) , 
                                                       compVal=NULL , ROPE=NULL ) )
     # Effect size, (mu - mu0) / sigma:
-    summaryInfo = rbind( summaryInfo , 
-                         "effSz" = summarizePost( 
-                           ( mcmcMat[,"mu"] - nullHypValMu ) / mcmcMat[,"sigma"] ,
-                           compVal=NULL , ROPE=NULL ) )
+    if (computeEffsz) {
+      summaryInfo = rbind( summaryInfo , 
+                           "effSz" = summarizePost( 
+                             ( mcmcMat[,"mu"] - nullHypValMu ) / mcmcMat[,"sigma"] ,
+                             compVal=NULL , ROPE=NULL ) )
+    }
   }
   
   # Two groups:
@@ -189,11 +198,13 @@ smryMCMC = function (codaSamples, nG, nullHypValMu=0, saveName=NULL,
                          "log10(nu[2])" = summarizePost( log10(mcmcMat[,"nu[2]"]) , 
                                                          compVal=NULL , ROPE=NULL ) )
     # Effect size, (mu1 - mu2) / sqrt((sigma1^2 + sigma2^2)/2):
-    summaryInfo = rbind( summaryInfo , 
-                         "effSz" = summarizePost( 
-                           ( mcmcMat[,"mu[1]"]-mcmcMat[,"mu[2]"] ) 
-                           / sqrt((mcmcMat[,"sigma[1]"]^2+mcmcMat[,"sigma[2]"]^2)/2) ,
-                           compVal=NULL , ROPE=NULL ) )
+    if (computeEffsz) {
+      summaryInfo = rbind( summaryInfo , 
+                           "effSz" = summarizePost( 
+                             ( mcmcMat[,"mu[1]"]-mcmcMat[,"mu[2]"] ) 
+                             / sqrt((mcmcMat[,"sigma[1]"]^2+mcmcMat[,"sigma[2]"]^2)/2) ,
+                             compVal=NULL , ROPE=NULL ) )
+    }
   }
   
   if ( !is.null(saveName) ) {
@@ -204,7 +215,12 @@ smryMCMC = function (codaSamples, nG, nullHypValMu=0, saveName=NULL,
   # DIAGNOSTICS
   
   if ( diagnostics == TRUE ) {
-    diagnosticsPath = paste0(sub("/.*", "", saveName), "/diagnostics")
+    splitted = strsplit(saveName, "/")
+    diagnosticsPath = ""
+    for (i in 1:(length(splitted[[1]])-1)) {
+      diagnosticsPath = paste0(diagnosticsPath, splitted[[1]][i], "/")
+    }
+    diagnosticsPath = paste0(diagnosticsPath, "diagnostics")
     dir.create(diagnosticsPath)
     parameterNames = varnames(codaSamples) 
     for ( parName in parameterNames ) {
@@ -220,7 +236,8 @@ plotMCMC = function( codaSamples, datFrm, yName="y", gName="cond",
                      nullHypValMu=0, compValMu=NULL, compValMuDiff=NULL, 
                      compValSigma=NULL, compValSigmaDiff=NULL, compValNu=NULL, 
                      compValEff=NULL, ropeEffSz=NULL, graphFileType="png", 
-                     saveName=NULL, groupNames=c(1,2), subscript="", subsEffsz="") {
+                     saveName=NULL, groupNames=c(1,2), subscript="", subsEffsz="",
+                     plotEffsz=TRUE) {
   # Display posterior information.
   # List of parameters:
   #   - codaSamples: codaSamples object with the MCMC chain.
@@ -242,6 +259,12 @@ plotMCMC = function( codaSamples, datFrm, yName="y", gName="cond",
   #   - subsEffsz: subscript to indicate the expression for the effect size.
   mcmcMat = as.matrix(codaSamples,chains=TRUE)
   chainLength = NROW( mcmcMat )
+  
+  # Creating group column if not existing:
+  if (is.null(gName)) {
+    datFrm = cbind(datFrm, group=rep(1,dim(datFrm)[1]))
+    gName = "group"
+  }
   
   y = as.numeric(datFrm[,yName])
   Ntotal = length(y)
@@ -369,59 +392,60 @@ plotMCMC = function( codaSamples, datFrm, yName="y", gName="cond",
   saveGraph( paste0(saveName,"-nu") , type=graphFileType )
   
   # Posterior effect size:
-  if ( nG == 1 ) {
-    # One group:
-    postEffSz = ( mcmcMat[,"mu"] - nullHypValMu ) / mcmcMat[,"sigma"]
-    openGraph(width=3.5,height=4)
-    if (subsEffsz != "" && subscript != "") {
-      plotPost( postEffSz , xlab=TeX(sprintf("$d_{%s,%s}$", subsEffsz, subscript)) , 
-                compVal=compValEff , ROPE=ropeEffSz , 
-                col="#0088aa8a" , cex=cex_plotPost )
-    } 
-    if (subsEffsz == "" && subscript != "") {
-      plotPost( postEffSz , xlab=TeX(sprintf("$d_{%s}$", subscript)) , 
-                compVal=compValEff , ROPE=ropeEffSz , 
-                col="#0088aa8a" , cex=cex_plotPost )
-    } 
-    if (subsEffsz != "" && subscript == "") {
-      plotPost( postEffSz , xlab=TeX(sprintf("$d_{%s}$", subsEffsz)) , 
-                compVal=compValEff , ROPE=ropeEffSz , 
-                col="#0088aa8a" , cex=cex_plotPost )
-    } 
-    if (subsEffsz == "" && subscript == "") {
-      plotPost( postEffSz , xlab=TeX(sprintf("$d$")) , 
-                compVal=compValEff , ROPE=ropeEffSz , 
-                col="#0088aa8a" , cex=cex_plotPost )
+  if (plotEffsz) {
+    if ( nG == 1 ) {
+      # One group:
+      postEffSz = ( mcmcMat[,"mu"] - nullHypValMu ) / mcmcMat[,"sigma"]
+      openGraph(width=3.5,height=4)
+      if (subsEffsz != "" && subscript != "") {
+        plotPost( postEffSz , xlab=TeX(sprintf("$d_{%s,%s}$", subsEffsz, subscript)) , 
+                  compVal=compValEff , ROPE=ropeEffSz , 
+                  col="#0088aa8a" , cex=cex_plotPost )
+      } 
+      if (subsEffsz == "" && subscript != "") {
+        plotPost( postEffSz , xlab=TeX(sprintf("$d_{%s}$", subscript)) , 
+                  compVal=compValEff , ROPE=ropeEffSz , 
+                  col="#0088aa8a" , cex=cex_plotPost )
+      } 
+      if (subsEffsz != "" && subscript == "") {
+        plotPost( postEffSz , xlab=TeX(sprintf("$d_{%s}$", subsEffsz)) , 
+                  compVal=compValEff , ROPE=ropeEffSz , 
+                  col="#0088aa8a" , cex=cex_plotPost )
+      } 
+      if (subsEffsz == "" && subscript == "") {
+        plotPost( postEffSz , xlab=TeX(sprintf("$d$")) , 
+                  compVal=compValEff , ROPE=ropeEffSz , 
+                  col="#0088aa8a" , cex=cex_plotPost )
+      }
     }
+    if ( nG == 2 ) {
+      # Two groups:
+      postEffSz = ( ( mcmcMat[,"mu[1]"] - mcmcMat[,"mu[2]"] ) 
+                    / sqrt( ( mcmcMat[,"sigma[1]"]^2 + mcmcMat[,"sigma[2]"]^2 ) / 2 ) )
+      openGraph(width=7,height=4)
+      if (subsEffsz != "" && subscript != "") {
+        plotPost( postEffSz , compVal=compValEff , ROPE=ropeEffSz , 
+                  col="#0088aa8a" , cex=cex_plotPost,
+                  xlab=TeX(sprintf("$d_{%s,%s}$", subsEffsz, subscript)) )
+      }
+      if (subsEffsz == "" && subscript != "") {
+        plotPost( postEffSz , compVal=compValEff , ROPE=ropeEffSz , 
+                  col="#0088aa8a" , cex=cex_plotPost,
+                  xlab=TeX(sprintf("$d_{%s}$", subscript)) )
+      }
+      if (subsEffsz != "" && subscript == "") {
+        plotPost( postEffSz , compVal=compValEff , ROPE=ropeEffSz , 
+                  col="#0088aa8a" , cex=cex_plotPost,
+                  xlab=TeX(sprintf("$d_{%s}$", subsEffsz)) )
+      }
+      if (subsEffsz == "" && subscript == "") {
+        plotPost( postEffSz , compVal=compValEff , ROPE=ropeEffSz , 
+                  col="#0088aa8a" , cex=cex_plotPost,
+                  xlab=TeX(sprintf("$d$")) )
+      }
+    }
+    saveGraph( paste0(saveName,"-EffSz") , type=graphFileType )
   }
-  if ( nG == 2 ) {
-    # Two groups:
-    postEffSz = ( ( mcmcMat[,"mu[1]"] - mcmcMat[,"mu[2]"] ) 
-                  / sqrt( ( mcmcMat[,"sigma[1]"]^2 + mcmcMat[,"sigma[2]"]^2 ) / 2 ) )
-    openGraph(width=7,height=4)
-    if (subsEffsz != "" && subscript != "") {
-      plotPost( postEffSz , compVal=compValEff , ROPE=ropeEffSz , 
-                col="#0088aa8a" , cex=cex_plotPost,
-                xlab=TeX(sprintf("$d_{%s,%s}$", subsEffsz, subscript)) )
-    }
-    if (subsEffsz == "" && subscript != "") {
-      plotPost( postEffSz , compVal=compValEff , ROPE=ropeEffSz , 
-                col="#0088aa8a" , cex=cex_plotPost,
-                xlab=TeX(sprintf("$d_{%s}$", subscript)) )
-    }
-    if (subsEffsz != "" && subscript == "") {
-      plotPost( postEffSz , compVal=compValEff , ROPE=ropeEffSz , 
-                col="#0088aa8a" , cex=cex_plotPost,
-                xlab=TeX(sprintf("$d_{%s}$", subsEffsz)) )
-    }
-    if (subsEffsz == "" && subscript == "") {
-      plotPost( postEffSz , compVal=compValEff , ROPE=ropeEffSz , 
-                col="#0088aa8a" , cex=cex_plotPost,
-                xlab=TeX(sprintf("$d$")) )
-    }
-  }
-  saveGraph( paste0(saveName,"-EffSz") , type=graphFileType )
-  
   # Posterior predictive (histogram of data with a smattering of curves 
   # superimposed):
   openGraph(height=min(2.5+0.75,14),width=3.5*nG)
