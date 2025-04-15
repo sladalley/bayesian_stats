@@ -113,13 +113,13 @@ genMCMC = function(datFrm, yName="y", gName="cond", muPrior, muSdPrior,
 }
 
 # ====== Summary of data and diagnostics ======================================
-smryMCMC = function (codaSamples, nG, nullHypValMu=0, saveName=NULL, 
+smryMCMC = function (codaSamples, nG, nullValEff=0, saveName=NULL, 
                      diagnostics=TRUE, graphFileType="png", computeEffsz=TRUE) {
   # Compute summary statistics of the chain and generate diagnostics plot.
   # List of parameters:
   #   - codaSamples: codaSamples object with the MCMC chain.
   #   - nG: number of groups.
-  #   - nullHypValMu: null hypothesis value for the mean (for single group).
+  #   - nullValEff: null value to calculate effect size when single group.
   #   - saveName: prefix of the output files.
   #   - diagnostics: to define if it should generate diagnostics plots.
   #   - graphFileType: type of the image output files.
@@ -150,7 +150,7 @@ smryMCMC = function (codaSamples, nG, nullHypValMu=0, saveName=NULL,
     if (computeEffsz) {
       summaryInfo = rbind( summaryInfo , 
                            "effSz" = summarizePost( 
-                             ( mcmcMat[,"mu"] - nullHypValMu ) / mcmcMat[,"sigma"] ,
+                             ( mcmcMat[,"mu"] - nullValEff ) / mcmcMat[,"sigma"] ,
                              compVal=NULL , ROPE=NULL ) )
     }
   }
@@ -233,7 +233,7 @@ smryMCMC = function (codaSamples, nG, nullHypValMu=0, saveName=NULL,
 
 # ====== Posterior distributions ==============================================
 plotMCMC = function( codaSamples, datFrm, yName="y", gName="cond", 
-                     nullHypValMu=0, compValMu=NULL, compValMuDiff=NULL, 
+                     nullValEff=0, compValMu=NULL, compValMuDiff=NULL, 
                      compValSigma=NULL, compValSigmaDiff=NULL, compValNu=NULL, 
                      compValEff=NULL, ropeEffSz=NULL, graphFileType="png", 
                      saveName=NULL, groupNames=c(1,2), subscript="", subsEffsz="",
@@ -244,7 +244,7 @@ plotMCMC = function( codaSamples, datFrm, yName="y", gName="cond",
   #   - datFrm: data set.
   #   - yName: name of the column with the data.
   #   - gName: name of the column with the group indexes. 
-  #   - nullHypValMu: null hypothesis value for the mean (for single group).
+  #   - nullValEff: null value to calculate effect size when single group.
   #   - compValMu: comparison value in the posterior mu plot(s).
   #   - compValMuDiff: comparison value in the posterior of mu difference plot (two groups).
   #   - compValSigma: comparison value in the posterior sigma plot(s).
@@ -395,7 +395,7 @@ plotMCMC = function( codaSamples, datFrm, yName="y", gName="cond",
   if (plotEffsz) {
     if ( nG == 1 ) {
       # One group:
-      postEffSz = ( mcmcMat[,"mu"] - nullHypValMu ) / mcmcMat[,"sigma"]
+      postEffSz = ( mcmcMat[,"mu"] - nullValEff ) / mcmcMat[,"sigma"]
       openGraph(width=3.5,height=4)
       if (subsEffsz != "" && subscript != "") {
         plotPost( postEffSz , xlab=TeX(sprintf("$d_{%s,%s}$", subsEffsz, subscript)) , 
