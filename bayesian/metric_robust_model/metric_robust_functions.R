@@ -255,8 +255,8 @@ plotMCMC = function( codaSamples, datFrm, yName="y", gName="cond",
   #   - graphFileType: type of the image output files.
   #   - saveName: prefix of the output files.
   #   - groupNames: names of each group to be displayed in the plots.
-  #   - subscript: subscript to indicate the variable.
-  #   - subsEffsz: subscript to indicate the expression for the effect size.
+  #   - subscript: subscript to indicate the variable (ex: time, errors, etc)
+  #   - subsEffsz: subscript to indicate the expression for the effect size (ex: 1-group, etc).
   mcmcMat = as.matrix(codaSamples,chains=TRUE)
   chainLength = NROW( mcmcMat )
   
