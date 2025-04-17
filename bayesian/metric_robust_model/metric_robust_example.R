@@ -53,6 +53,7 @@ if (analysis == "paired") {
   subscript = "diff" # subscript to identify measured variable
   subsEffsz = "1-group" # subscript to identify the effect size expression
  
+  # Getting number of groups from data:
   g = as.numeric(as.factor(datFrm[,gName]))
   nG = max(g) # number of groups
   
@@ -101,6 +102,7 @@ if (analysis == "independent") {
   subscript = "" # subscript to identify measured variable
   subsEffsz = "" # subscript to identify the effect size expression
   
+  # Getting number of groups from data:
   g = as.numeric(as.factor(datFrm[,gName]))
   nG = max(g) # number of groups
   

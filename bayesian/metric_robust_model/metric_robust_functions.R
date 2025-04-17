@@ -257,6 +257,7 @@ plotMCMC = function( codaSamples, datFrm, yName="y", gName="cond",
   #   - groupNames: names of each group to be displayed in the plots.
   #   - subscript: subscript to indicate the variable (ex: time, errors, etc)
   #   - subsEffsz: subscript to indicate the expression for the effect size (ex: 1-group, etc).
+  #   - plotEffSz: if effect size should be plotted (TRUE) or not (FALSE).
   mcmcMat = as.matrix(codaSamples,chains=TRUE)
   chainLength = NROW( mcmcMat )
   
