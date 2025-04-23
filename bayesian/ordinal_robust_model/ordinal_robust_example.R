@@ -1,7 +1,7 @@
 graphics.off()
 rm(list=ls())
 
-source("ordinalRobustFunctions.R")
+source("ordinal_robust_functions.R")
 
 # Generating a data set using a uniform distribution just to test the script:
 datFrm = data.frame (resp=integer(), item=integer(), 
