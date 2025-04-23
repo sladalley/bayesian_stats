@@ -32,8 +32,11 @@ fileNameRoot = paste0(fileNameRoot, "/", fileNameRoot)
 graphFileType = "pdf"
 
 # Choosing type of analysis ("paired" or "independent"):
-analysis = "paired"
-removeEmpty = TRUE
+analysis = "independent"
+
+# Choosing to treat the data with empty levels or not
+# If TRUE, a single answer will be added to each empty level found
+treatEmpty = TRUE
 
 # ======= Paired/one-group analysis =====================================
 if (analysis == "paired") {
@@ -73,7 +76,7 @@ if (analysis == "paired") {
   nQ = max(q) # number of items
   nG = max(g) # number of groups
   
-  if (removeEmpty) {
+  if (treatEmpty) {
     # Plotting data histograms before adding extra data:
     plotDataHistograms(datFrm, Nlevels=maxLevel, graphFileType=graphFileType,
                        saveName=fileNameRoot)
@@ -141,7 +144,7 @@ if (analysis == "independent") {
   nQ = max(q) # number of items
   nG = max(g) # number of groups
   
-  if (removeEmpty) {
+  if (treatEmpty) {
     # Plotting data histograms before adding extra data:
     plotDataHistograms(datFrm, Nlevels=maxLevel, graphFileType=graphFileType,
                        saveName=fileNameRoot, groupNames=groupNames)
@@ -187,8 +190,5 @@ if (analysis == "independent") {
            extraInfo = extraInfo)
   
 }
-
-
-
 
 graphics.off()
