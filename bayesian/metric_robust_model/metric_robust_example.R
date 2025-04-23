@@ -9,6 +9,7 @@ groups = 2 # number of groups
 subjects = 30 # number of subjects
 minValue = 40 # minimum value for the uniform distribution
 maxValue = 120 # maximum value for the uniform distribution
+set.seed(7)
 for (g in 1:groups) {
   for (s in 1:subjects) {
     y = runif(1, min=minValue, max=maxValue) # sampling from uniform distribution

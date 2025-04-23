@@ -447,6 +447,7 @@ plotMCMC = function( codaSamples, datFrm, yName="y", gName="cond",
     }
     saveGraph( paste0(saveName,"-EffSz") , type=graphFileType )
   }
+  
   # Posterior predictive (histogram of data with a smattering of curves 
   # superimposed):
   openGraph(height=min(2.5+0.75,14),width=3.5*nG)
@@ -496,11 +497,12 @@ plotMCMC = function( codaSamples, datFrm, yName="y", gName="cond",
               type="l" , col="#0088aa8a" , lwd=1 )
       }
     }
+    mtext( text=TeX(sprintf("$\\bar{x}=%f\\;\\,\\tilde{x}=%f\\;\\,s=%f$", 
+                            round(mean(thisY), 2), 
+                            round(median(thisY), 2), round(sd(thisY), 2))) ,
+           at=ifelse(nG>=2,0.5*gIdx-0.2,0.5) , cex=1.0 , side=3 , outer=TRUE , 
+           adj=c(0.5,0.5) , padj=c(-0.5,-0.5) )
   }
-  mtext( text=TeX(sprintf("$\\bar{x}=%f\\;\\,\\tilde{x}=%f\\;\\,s=%f$", round(mean(y), 2), 
-                          round(median(y), 2), round(sd(y), 2))) ,
-         at=c(0.5) , cex=ifelse(nG>=2,1.5,1.0) , side=3 , outer=TRUE , 
-         adj=c(0.5,0.5) , padj=c(-0.5,-0.5) )
   saveGraph( paste0(saveName,"-PostPred") , type=graphFileType )
   
   # Parameters pairwise, to see correlations:
