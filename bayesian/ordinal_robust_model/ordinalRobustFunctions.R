@@ -102,19 +102,61 @@ plotDataHistograms = function(data, yName="resp", qName="item", sName="subID",
       xLim = c( minLevel-0.5 , maxLevel+0.5 )
       xBreaks = seq( xLim[1] , xLim[2] , 1 )  
       if (nG == 1) {
-        histInfo = hist( thisY , prob=TRUE , ylim=c(0,dataScaleDensMax) , 
-                         xlim=xLim , breaks=xBreaks ,
-                         xlab="Ordinal responses" , ylab="p(Resp)" , cex.lab=1.5 , 
-                         col="#f4e3d7ff" , border="white" , xaxt="n" , 
-                         #yaxt="n" , 
-                         main="" )
+        if (qIdx < nQ) {
+          # Only y label
+          histInfo = hist( thisY , prob=TRUE , ylim=c(0,dataScaleDensMax) , 
+                           xlim=xLim , breaks=xBreaks ,
+                           xlab="" , ylab="p(response)" , cex.axis=1.2 , 
+                           cex.lab=1.5 ,
+                           col="#f4e3d7ff" , border="white" , xaxt="n" ,
+                           main=paste0("Item ",qIdx), cex.main=1.5)
+        } else {
+          # Both labels
+          histInfo = hist( thisY , prob=TRUE , ylim=c(0,dataScaleDensMax) , 
+                           xlim=xLim , breaks=xBreaks ,
+                           xlab="Ordinal responses" , ylab="p(response)" , 
+                           cex.axis=1.2, cex.lab=1.5 , # yaxt="n" ,
+                           col="#f4e3d7ff" , border="white" , xaxt="n" ,
+                           main=paste0("Item ",qIdx), cex.main=1.5)
+        }
       } else {
-        histInfo = hist( thisY , prob=TRUE , ylim=c(0,dataScaleDensMax) , 
-                         xlim=xLim , breaks=xBreaks ,
-                         xlab="Ordinal responses" , ylab="p(Resp)" , cex.lab=1.5 , 
-                         col="#f4e3d7ff" , border="white" , xaxt="n" , 
-                         #yaxt="n" , 
-                         main=paste0("Item ",qIdx,", Group ",groupNames[gIdx]) )
+        if (gIdx > 1 & qIdx == nQ) {
+          # Only x label
+          histInfo = hist( thisY , prob=TRUE , ylim=c(0,dataScaleDensMax) , 
+                           xlim=xLim , breaks=xBreaks ,
+                           xlab="Ordinal responses" , ylab="" , cex.axis=1.2,
+                           cex.lab=1.5 , yaxt="n" , 
+                           col="#f4e3d7ff" , border="white" , xaxt="n" ,
+                           main=paste0("Item ",qIdx,", Group ",groupNames[gIdx]),
+                           cex.main=1.5)
+        } else if (gIdx == 1 & qIdx < nQ) {
+          # Only y label
+          histInfo = hist( thisY , prob=TRUE , ylim=c(0,dataScaleDensMax) , 
+                           xlim=xLim , breaks=xBreaks ,
+                           xlab="" , ylab="p(response)" , cex.axis=1.2,
+                           cex.lab=1.5 , # yaxt="n" ,
+                           col="#f4e3d7ff" , border="white" , xaxt="n" ,
+                           main=paste0("Item ",qIdx,", Group ",groupNames[gIdx]),
+                           cex.main=1.5)
+        } else if (gIdx > 1 & qIdx < nQ) {
+          # No labels
+          histInfo = hist( thisY , prob=TRUE , ylim=c(0,dataScaleDensMax) , 
+                           xlim=xLim , breaks=xBreaks ,
+                           xlab="" , ylab="" , cex.axis=1.2, 
+                           cex.lab=1.5 , yaxt="n" ,
+                           col="#f4e3d7ff" , border="white" , xaxt="n" ,
+                           main=paste0("Item ",qIdx,", Group ",groupNames[gIdx]),
+                           cex.main=1.5)
+        } else {
+          # Both labels
+          histInfo = hist( thisY , prob=TRUE , ylim=c(0,dataScaleDensMax) , 
+                           xlim=xLim , breaks=xBreaks ,
+                           xlab="Ordinal responses" , ylab="p(response)" , 
+                           cex.axis=1.2, cex.lab=1.5 , #yaxt="n" ,
+                           col="#f4e3d7ff" , border="white" , xaxt="n" ,
+                           main=paste0("Item ",qIdx,", Group ",groupNames[gIdx]),
+                           cex.main=1.5)
+        }
       }
       axis(side=1, seq(minLevel, maxLevel, 1), seq(minLevel, maxLevel, 1))
     }
@@ -605,6 +647,7 @@ plotMCMC = function (ordCodaSamples, datFrm, yName="resp", qName="item",
     }
     saveGraph( paste0(saveName,"-EffSz") , type=graphFileType )
   }
+  
   # Thresholds:
   openGraph(height=min(2.5*nQ,14),width=7)
   par( mar=c(3.5,3.5,2,1) , mgp=c(2.25,0.7,0) )
@@ -646,20 +689,68 @@ plotMCMC = function (ordCodaSamples, datFrm, yName="resp", qName="item",
       xLim = c( minLevel-0.5 , maxLevel+0.5 )
       xBreaks = seq( xLim[1] , xLim[2] , 1 )  
       if (nG == 1) {
-        histInfo = hist( thisY , prob=TRUE , ylim=c(0,dataScaleDensMax) , 
-                         xlim=xLim , breaks=xBreaks ,
-                         xlab="Ordinal responses" , ylab="p(Resp)" , cex.lab=1.5 , 
-                         col="#f4e3d7ff" , border="white" , xaxt="n" ,
-                         #yaxt="n" , 
-                         main="" )
+        if (qIdx < nQ) {
+          # Only y label
+          histInfo = hist( thisY , prob=TRUE , ylim=c(0,dataScaleDensMax) , 
+                           xlim=xLim , breaks=xBreaks ,
+                           xlab="" , ylab="p(response)" , cex.axis=1.2 , 
+                           cex.lab=1.5 ,
+                           col="#f4e3d7ff" , border="white" , xaxt="n" ,
+                           main=paste0("Item ",qIdx), cex.main=1.5)
+        } else {
+          # Both labels
+          histInfo = hist( thisY , prob=TRUE , ylim=c(0,dataScaleDensMax) , 
+                           xlim=xLim , breaks=xBreaks ,
+                           xlab="Ordinal responses" , ylab="p(response)" , 
+                           cex.axis=1.2, cex.lab=1.5 , # yaxt="n" ,
+                           col="#f4e3d7ff" , border="white" , xaxt="n" ,
+                           main=paste0("Item ",qIdx), cex.main=1.5)
+        }
         extra = extraInfo
       } else {
-        histInfo = hist( thisY , prob=TRUE , ylim=c(0,dataScaleDensMax) , 
-                         xlim=xLim , breaks=xBreaks ,
-                         xlab="Ordinal responses" , ylab="p(Resp)" , cex.lab=1.5 , 
-                         col="#f4e3d7ff" , border="white" , xaxt="n" ,
-                         #yaxt="n" , 
-                         main=paste0("Item ",qIdx,", Group ",groupNames[gIdx]) )
+        if (gIdx > 1 & qIdx == nQ) {
+          # Only x label
+          histInfo = hist( thisY , prob=TRUE , ylim=c(0,dataScaleDensMax) , 
+                           xlim=xLim , breaks=xBreaks ,
+                           xlab="Ordinal responses" , ylab="" , cex.axis=1.2,
+                           cex.lab=1.5 , yaxt="n" , 
+                           col="#f4e3d7ff" , border="white" , xaxt="n" ,
+                           main=paste0("Item ",qIdx,", Group ",groupNames[gIdx]),
+                           cex.main=1.5)
+        } else if (gIdx == 1 & qIdx < nQ) {
+          # Only y label
+          histInfo = hist( thisY , prob=TRUE , ylim=c(0,dataScaleDensMax) , 
+                           xlim=xLim , breaks=xBreaks ,
+                           xlab="" , ylab="p(response)" , cex.axis=1.2,
+                           cex.lab=1.5 , # yaxt="n" ,
+                           col="#f4e3d7ff" , border="white" , xaxt="n" ,
+                           main=paste0("Item ",qIdx,", Group ",groupNames[gIdx]),
+                           cex.main=1.5)
+        } else if (gIdx > 1 & qIdx < nQ) {
+          # No labels
+          histInfo = hist( thisY , prob=TRUE , ylim=c(0,dataScaleDensMax) , 
+                           xlim=xLim , breaks=xBreaks ,
+                           xlab="" , ylab="" , cex.axis=1.2, 
+                           cex.lab=1.5 , yaxt="n" ,
+                           col="#f4e3d7ff" , border="white" , xaxt="n" ,
+                           main=paste0("Item ",qIdx,", Group ",groupNames[gIdx]),
+                           cex.main=1.5)
+        } else {
+          # Both labels
+          histInfo = hist( thisY , prob=TRUE , ylim=c(0,dataScaleDensMax) , 
+                           xlim=xLim , breaks=xBreaks ,
+                           xlab="Ordinal responses" , ylab="p(response)" , 
+                           cex.axis=1.2, cex.lab=1.5 , #yaxt="n" ,
+                           col="#f4e3d7ff" , border="white" , xaxt="n" ,
+                           main=paste0("Item ",qIdx,", Group ",groupNames[gIdx]),
+                           cex.main=1.5)
+        }
+        #histInfo = hist( thisY , prob=TRUE , ylim=c(0,dataScaleDensMax) , 
+        #                 xlim=xLim , breaks=xBreaks ,
+        #                 xlab="Ordinal responses" , ylab="p(resp)" , cex.lab=1.5 , 
+        #                 col="#f4e3d7ff" , border="white" , xaxt="n" ,
+        #                 #yaxt="n" , 
+        #                 main=paste0("Item ",qIdx,", Group ",groupNames[gIdx]) )
         extra = extraInfo[[gIdx]]
       }
       # Adding * in axis labels to indicate levels with extra data:

@@ -11,6 +11,7 @@ subjects = 30 # number of subjects
 items = 4 # number of items
 minLevel = 1 # minimum level of response scale
 maxLevel = 5 # maximum level of response scale
+set.seed(7)
 for (g in 1:groups) {
   for (s in 1:subjects) {
     for (i in 1:items) {
@@ -84,10 +85,6 @@ if (analysis == "paired") {
   } else { 
     extraInfo = NULL
   }
-  
-  # Plotting data histograms before adding extra data:
-  plotDataHistograms(datFrm, Nlevels=maxLevel, graphFileType=graphFileType,
-                     saveName=fileNameRoot)
   
   # Setting parameters for prior distributions:
   muPrior = rep(0.0,nG)+((minLevel+maxLevel)/2) # mean of means priors (normal distribution)
