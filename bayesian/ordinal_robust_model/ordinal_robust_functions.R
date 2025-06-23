@@ -416,7 +416,12 @@ smryMCMC = function (ordCodaSamples, nG, nullValEff=0, saveName=NULL,
   # DIAGNOSTICS
   
   if ( diagnostics == TRUE ) {
-    diagnosticsPath = paste0(sub("/.*", "", saveName), "/diagnostics")
+    splitted = strsplit(saveName, "/")
+    diagnosticsPath = ""
+    for (i in 1:(length(splitted[[1]])-1)) {
+      diagnosticsPath = paste0(diagnosticsPath, splitted[[1]][i], "/")
+    }
+    diagnosticsPath = paste0(diagnosticsPath, "diagnostics")
     dir.create(diagnosticsPath)
     ordParameterNames = varnames(ordCodaSamples) 
     for ( parName in ordParameterNames ) {
