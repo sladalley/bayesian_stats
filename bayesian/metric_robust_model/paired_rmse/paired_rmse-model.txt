@@ -1,0 +1,22 @@
+
+  model {
+    for (i in 1:Ntotal) {
+
+      y[i] ~ dlnorm(mu[g[i]], 1/sigma[g[i]]^2)
+    }
+
+    for (gIdx in 1:nG) {
+        mu[gIdx] ~ dnorm( muPrior[gIdx] , 1/(muSdPrior[gIdx])^2 )
+       sigma[gIdx] ~ dunif( sigmaPriorLow[gIdx] , sigmaPriorHigh[gIdx] )
+      # LOCATION (log-space mean)
+      mu[gIdx] ~ dnorm(0.0, 1.0E-6)
+  
+      # SCALE (Jeffreys-consistent: 1/sigma behaviour via log transform)
+    #  log_sigma[gIdx] ~ dnorm(0.0, 1.0)
+      #sigma[gIdx] <- exp(log_sigma[gIdx])
+  
+     # tau[gIdx] <- 1 / (sigma[gIdx] * sigma[gIdx])
+
+    }
+  }
+  

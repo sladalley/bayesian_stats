@@ -8,8 +8,8 @@ source("DBDA2E-utilities.R")
 library('latex2exp')
 
 # ====== MCMC chain ===========================================================
-genMCMC = function(datFrm, yName="y", gName="cond", muPrior, muSdPrior, 
-                   sigmaPriorLow, sigmaPriorHigh, saveName=NULL) { 
+genMCMC = function(datFrm, yName="y", gName="cond", muPrior=NULL, muSdPrior=NULL, 
+                   sigmaPriorLow=NULL, sigmaPriorHigh=NULL, saveName=NULL, numSavedSteps = 20000) { 
   # Generate the MCMC chain using JAGS.
   # List of parameters:
   #   - datFrm: data set.
@@ -37,10 +37,46 @@ genMCMC = function(datFrm, yName="y", gName="cond", muPrior, muSdPrior,
   g = as.numeric(as.factor(datFrm[,gName])) # group data vector
   gLevels = levels(as.factor(datFrm[,gName]))
   nG = max(g) # number of groups
+  if (nG == 2){
+  if (is.null(muPrior))
+  {
+    muPrior = c( mean(y[ g==1 ]), mean(y[ g==2 ]) )
+  }
+  if (is.null(muSdPrior))
+  {
+    muSdPrior = 100*c( sd(y[ g==1 ]), sd(y[ g==2 ]) )
+  }
+  if (is.null(sigmaPriorLow))
+  {
+    sigmaPriorLow = c( sd(y[ g==1 ]), sd(y[ g==2 ]) )/1000
+  }
+  if (is.null(sigmaPriorHigh))
+  {
+    sigmaPriorHigh = 1000*c( sd(y[ g==1 ]), sd(y[ g==2 ]) ) 
+  }
+  }
+  if (nG == 1){
+    if (is.null(muPrior))
+    {
+      muPrior = mean(y)
+    }
+    if (is.null(muSdPrior))
+    {
+      muSdPrior = 100*sd(y)
+    }
+    if (is.null(sigmaPriorLow))
+    {
+      sigmaPriorLow = sd(y)/1000
+    }
+    if (is.null(sigmaPriorHigh))
+    {
+      sigmaPriorHigh = 1000*sd(y)
+    }
+  }
   
   # Specify the data in a list, for later shipment to JAGS:
   dataList = list(
-    y = y , # data
+     y = y , # data
     g = g , # groups
     nG = nG , # number of groups
     Ntotal = Ntotal , # total size of data set
@@ -83,7 +119,6 @@ genMCMC = function(datFrm, yName="y", gName="cond", muPrior, muSdPrior,
   #-----------------------------------------------------------------------------
   # RUN THE CHAINS
   parameters = c( "mu" , "sigma" , "nu" )     # The parameters to be monitored
-  numSavedSteps = 20000
   thinSteps = 5
   adaptSteps = 500               # Number of steps to "tune" the samplers
   burnInSteps = 1000
@@ -146,6 +181,11 @@ smryMCMC = function (codaSamples, nG, nullValEff=0, saveName=NULL,
     summaryInfo = rbind( summaryInfo , 
                          "log10(nu)" = summarizePost( log10(mcmcMat[,"nu"]) , 
                                                       compVal=NULL , ROPE=NULL ) )
+    summaryInfo = rbind( summaryInfo , 
+                         "median" = summarizePost( mcmcMat[,"nu"] , 
+                                               compVal=NULL , ROPE=NULL ) )
+    
+    
     # Effect size, (mu - mu0) / sigma:
     if (computeEffsz) {
       summaryInfo = rbind( summaryInfo , 
@@ -235,7 +275,7 @@ smryMCMC = function (codaSamples, nG, nullValEff=0, saveName=NULL,
 plotMCMC = function( codaSamples, datFrm, yName="y", gName="cond", 
                      nullValEff=0, compValMu=NULL, compValMuDiff=NULL, 
                      compValSigma=NULL, compValSigmaDiff=NULL, compValNu=NULL, 
-                     compValEff=NULL, ropeEffSz=NULL, graphFileType="png", 
+                     compValEff=NULL, ropeMu=NULL, ropeSigma = NULL, ropeEffSz=NULL, graphFileType="png", 
                      saveName=NULL, groupNames=c(1,2), subscript="", subsEffsz="",
                      plotEffsz=TRUE) {
   # Display posterior information.
@@ -251,6 +291,8 @@ plotMCMC = function( codaSamples, datFrm, yName="y", gName="cond",
   #   - compValSigmaDiff: comparison value in the posterior of sigma difference plot (two groups).
   #   - compValNu: comparison value in the posterior nu plot(s).
   #   - compValEff: comparison value in the posterior effect size plot.
+  #   - ropeMu: ROPE in the posterior mean (mu) plot.
+  #   - ropeSigma: ROPE in the posterior s.d. (sigma) plot.
   #   - ropeEffSz: ROPE in the posterior effect size plot.
   #   - graphFileType: type of the image output files.
   #   - saveName: prefix of the output files.
@@ -318,10 +360,10 @@ plotMCMC = function( codaSamples, datFrm, yName="y", gName="cond",
                 xlab=TeX(sprintf("$\\tau_{%s,%s}$", subscript, groupNames[2])) , 
                 xlim=sigmaLim , compVal=compValSigma[2] , 
                 col="#0088aa8a" , cex=cex_plotPost )
-      plotPost( mcmcMat[,"mu[1]"]-mcmcMat[,"mu[2]"] , compVal=compValMuDiff ,
+      plotPost( mcmcMat[,"mu[1]"]-mcmcMat[,"mu[2]"] , compVal=compValMuDiff , ROPE=ropeMu,
                 xlab=TeX(sprintf("$\\mu_{%s,%s} - \\mu_{%s,%s}$", subscript, groupNames[1], subscript, groupNames[2])) , 
                 cex=cex_plotPost , col="#0088aa8a" )
-      plotPost( mcmcMat[,"sigma[1]"]-mcmcMat[,"sigma[2]"] , compVal=compValSigmaDiff , 
+      plotPost( mcmcMat[,"sigma[1]"]-mcmcMat[,"sigma[2]"] , compVal=compValSigmaDiff , ROPE=ropeSigma,
                 xlab=TeX(sprintf("$\\tau_{%s,%s} - \\tau_{%s,%s}$", subscript, groupNames[1], subscript, groupNames[2])) , 
                 cex=cex_plotPost , col="#0088aa8a"  )
     } else {
@@ -341,10 +383,10 @@ plotMCMC = function( codaSamples, datFrm, yName="y", gName="cond",
                 xlab=TeX(sprintf("$\\tau_{%s}$", groupNames[2])) , 
                 xlim=sigmaLim , compVal=compValSigma[2] , 
                 col="#0088aa8a" , cex=cex_plotPost )
-      plotPost( mcmcMat[,"mu[1]"]-mcmcMat[,"mu[2]"] , compVal=compValMuDiff ,
+      plotPost( mcmcMat[,"mu[1]"]-mcmcMat[,"mu[2]"] , compVal=compValMuDiff ,ROPE=ropeMu,
                 xlab=TeX(sprintf("$\\mu_{%s} - \\mu_{%s}$", groupNames[1], groupNames[2])) , 
                 cex=cex_plotPost , col="#0088aa8a" )
-      plotPost( mcmcMat[,"sigma[1]"]-mcmcMat[,"sigma[2]"] , compVal=compValSigmaDiff , 
+      plotPost( mcmcMat[,"sigma[1]"]-mcmcMat[,"sigma[2]"] , compVal=compValSigmaDiff , ROPE=ropeSigma,
                 xlab=TeX(sprintf("$\\tau_{%s} - \\tau_{%s}$", groupNames[1], groupNames[2])) , 
                 cex=cex_plotPost , col="#0088aa8a"  )
     }
@@ -462,7 +504,9 @@ plotMCMC = function( codaSamples, datFrm, yName="y", gName="cond",
     xBreaks = seq( xLim[1] , xLim[2] , 
                    length=ceiling((xLim[2]-xLim[1])/(sd(thisY)/4)) )
     histInfo = hist(thisY, breaks=xBreaks, plot=FALSE)
-    yMax = 1.2 * max( histInfo$density )
+    dens_max <- max(density(thisY)$y)
+    hist_max <-max( histInfo$density )
+    yMax = 1.2*max(dens_max,hist_max)
     # Histogram:
     if (nG == 1) {
       histInfo = hist( thisY , prob=TRUE , ylim=c(0,yMax) , 
@@ -582,16 +626,22 @@ plotMCMC = function( codaSamples, datFrm, yName="y", gName="cond",
 #   BEST.R (from *Bayesian estimation supersedes the t test* [Kruschke, 2013]) 
 #   scripts.
 
-goalAchievedForSample = function( data, muNULL, effROPE, effHDImaxWid,
-                                  mcmcLength=10000) {
+goalAchievedForSample = function( data, muNULL, effROPE, effHDImaxWid, muROPE,
+                                  mcmcLength=10000, yName = 'y', gName = 'cond') {
   # Generate the MCMC chain:
-  mcmcCoda = genMCMC( data=data , numSavedSteps=mcmcLength , saveName=NULL )
+  mcmcCoda = genMCMC( datFrm = data , numSavedSteps=mcmcLength , saveName=NULL, yName = yName, gName = gName )
   mcmcMat = as.matrix(mcmcCoda,chains=TRUE)
+  #print(mcmcMat)
   # Calculate effect size:
-  mcmcMatEff = ( mcmcMat[,"mu"] - muNULL ) / mcmcMat[,"sigma"]
+  HDImat = apply( mcmcMat , 2 , "HDIofMCMC" )
+  show( HDImat[,1:5] )
+  mcmcMatEff = ( ( mcmcMat[,"mu[1]"] - mcmcMat[,"mu[2]"] ) 
+                 / sqrt( ( mcmcMat[,"sigma[1]"]^2 + mcmcMat[,"sigma[2]"]^2 ) / 2 ) )
+  mcmcMatDM = ( mcmcMat[,"mu[1]"] - mcmcMat[,"mu[2]"] ) 
   
   # Check goal achievement. First, compute the HDI of the effect size:
   effHDI = HDIofMCMC( mcmcMatEff )
+  effDM = HDIofMCMC( mcmcMatDM )
   
   # Define list for recording results:
   goalAchieved = list()
@@ -610,14 +660,26 @@ goalAchievedForSample = function( data, muNULL, effROPE, effHDImaxWid,
   goalAchieved = c( goalAchieved , 
                     "HDIaboveROPE"=( effHDI[1] > effROPE[2] ) )
   
+  HDImaxWid = 0.1  
+  muCols = grep("mu",colnames(HDImat))
+  # Goal 4: all mu's HDI width less than max width:
+  goalAchieved = c( goalAchieved , 
+                    "muNarrowHDI"= all( HDImat[2,muCols] 
+                                            - HDImat[1,muCols] 
+                                            < HDImaxWid ) )
+  
+  
+  goalAchieved = c( goalAchieved , 
+                    "DMExludeRope"= ( effDM[1] > muROPE[2]  | effDM[2] < muROPE[1]))
+  
   # Return list of goal results:
   return(goalAchieved)
 }
 
-powerEstimation = function( mcmcChain, N, muNULL, 
+powerEstimation = function( mcmcChain, N, muNULL, muROPE,
                             effROPE, effHDImaxWid, 
-                            mcmcLength=10000, nRep=1000 , 
-                            saveName=NULL, recover=0) {
+                            mcmcLength=20000, nRep=1000 , 
+                            saveName=NULL, recover=0, yName="y", gName="cond", groupNames) {
   # Description of arguments:
   #   - mcmcChain is a matrix with a MCMC chain.
   #   - N is the sample size.
@@ -639,6 +701,8 @@ powerEstimation = function( mcmcChain, N, muNULL,
   # For each selected step of the chain, we get the parameter values, create 
   # a simulated data set, run bayesian estimation to obtain the posterior 
   # distributions and then we check if the goals were achieved or not.
+  N1 = 200;
+  N2 = 200;
   nSim = 0
   if (recover == 1) {
     load( paste(saveName, "Power.Rdata", sep="") )
@@ -653,15 +717,38 @@ powerEstimation = function( mcmcChain, N, muNULL,
                 length(stepIdxVec) , ":\n\n" ) )
     
     # Get parameter values for this simulation:
-    muVal = mcmcChain[stepIdx,"mu"]
-    sigmaVal = mcmcChain[stepIdx,"sigma"]
-    nuVal = mcmcChain[stepIdx,"nu"]
-    # Generate simulated data:
-    simulatedData = rt( N , df=nuVal ) * sigmaVal + muVal
+    #print(mcmcChain)
+   #print(stepIdx)
+    # Extract parameters for BOTH controllers
+    mu1 = mcmcChain[stepIdx,"mu[1]"]
+    mu2 = mcmcChain[stepIdx,"mu[2]"]
     
+    sigma1 = mcmcChain[stepIdx,"sigma[1]"]
+    sigma2 = mcmcChain[stepIdx,"sigma[2]"]
+    
+    nu1 = mcmcChain[stepIdx,"nu[1]"]
+    nu2 = mcmcChain[stepIdx,"nu[2]"]
+    
+    # Simulate data for each controller
+    y1 = rt(N1, df=nu1) * sigma1 + mu1
+    y2 = rt(N2, df=nu2) * sigma2 + mu2
+    
+   
+    
+    # Compute trial-wise differences (paired case)
+    # meanDiffSamples[i] <- mean(y1s) - mean(y2s)
+    # Generate simulated data:
+    dataMat <- matrix(0, ncol = 2, nrow = 0,
+                      dimnames = list(NULL, c(yName,gName)))
+    
+    dataMat <- rbind(dataMat, cbind(y1, rep(groupNames[1], length(y1))))
+    dataMat <- rbind(dataMat, cbind(y2, rep(groupNames[2], length(y2))))
+    simulatedData = dataMat
+    
+   # print(simulatedData)
     # Do bayesian analysis on simulated data:
-    goalAchieved = goalAchievedForSample( simulatedData, muNULL, 
-                                          effROPE, effHDImaxWid, mcmcLength )
+    goalAchieved = goalAchievedForSample( data.frame(simulatedData), muNULL, muROPE = muROPE,
+                                          effROPE, effHDImaxWid, mcmcLength, yName = yName, gName = gName )
     
     # Tally the results:
     # goalTally is a matrix to store the results of each simulated analysis.
@@ -673,7 +760,7 @@ powerEstimation = function( mcmcChain, N, muNULL,
     goalTally = rbind( goalTally , goalAchieved )
     
     if ( !is.null(saveName) ) {  
-      save( goalTally, file=paste(saveName, "Power.Rdata", sep="") )
+      file = paste0(saveName, "_N", N, "_", gName, "_Power.Rdata")
     }
     
   }

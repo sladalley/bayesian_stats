@@ -49,3 +49,8 @@ po/*~
 
 # RStudio Connect folder
 rsconnect/
+
+# Experimental Analysis
+
+bayesian/metric_robust_model/ExperimentalAnalysis/
+
