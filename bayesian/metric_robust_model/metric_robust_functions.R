@@ -8,7 +8,7 @@ source("DBDA2E-utilities.R")
 library('latex2exp')
 
 # ====== MCMC chain ===========================================================
-genMCMC = function(datFrm, yName="y", gName="cond", muPrior=NULL, muSdPrior=NULL, 
+genMCMC = function(datFrm, yName="y", gName=NULL, muPrior=NULL, muSdPrior=NULL, 
                    sigmaPriorLow=NULL, sigmaPriorHigh=NULL, saveName=NULL, numSavedSteps = 20000) { 
   # Generate the MCMC chain using JAGS.
   # List of parameters:
@@ -23,6 +23,8 @@ genMCMC = function(datFrm, yName="y", gName="cond", muPrior=NULL, muSdPrior=NULL
   #-----------------------------------------------------------------------------
 
   # Creating group column if not existing:
+ # print(datFrm)
+ # print(dim(datFrm)[1])
   if (is.null(gName)) {
     datFrm = cbind(datFrm, group=rep(1,dim(datFrm)[1]))
     gName = "group"
@@ -108,14 +110,29 @@ genMCMC = function(datFrm, yName="y", gName="cond", muPrior=NULL, muSdPrior=NULL
   #   The estimated paremeters are: mean, standard deviation and normality.
   #   The initial mean and s.d. are the ones obtained from the data and
   #     the normality initializes at 5, as a moderate value.
+  # N chains selected for the MCMC
+  
+  nChains = 8
   if (nG == 1) { 
-    initsList = list( mu = mean(y) , sigma = sd(y) , nuMinusOne = 5 )
+    baseInit = list( mu = mean(y) , sigma = sd(y) , nuMinusOne = 5 )
   }
+  
   if (nG == 2) {
-    initsList = list( mu = c( mean(y[g==1]) , mean(y[g==2]) ) , 
+    baseInit = list( mu = c( mean(y[g==1]) , mean(y[g==2]) ) , 
                       sigma = c( sd(y[g==1]) , sd(y[g==2]) ) , 
                       nuMinusOne = c( 5 , 5 ) )
   }
+  
+  initsList <- lapply(1:nChains,function(i){
+    c(
+      baseInit,
+      list(
+        .RNG.name = "base::Mersenne-Twister",
+        .RNG.seed = 3000 + i
+      )
+    )
+  })
+  
   #-----------------------------------------------------------------------------
   # RUN THE CHAINS
   parameters = c( "mu" , "sigma" , "nu" )     # The parameters to be monitored
@@ -181,9 +198,6 @@ smryMCMC = function (codaSamples, nG, nullValEff=0, saveName=NULL,
     summaryInfo = rbind( summaryInfo , 
                          "log10(nu)" = summarizePost( log10(mcmcMat[,"nu"]) , 
                                                       compVal=NULL , ROPE=NULL ) )
-    summaryInfo = rbind( summaryInfo , 
-                         "median" = summarizePost( mcmcMat[,"nu"] , 
-                                               compVal=NULL , ROPE=NULL ) )
     
     
     # Effect size, (mu - mu0) / sigma:
@@ -626,7 +640,7 @@ plotMCMC = function( codaSamples, datFrm, yName="y", gName="cond",
 #   BEST.R (from *Bayesian estimation supersedes the t test* [Kruschke, 2013]) 
 #   scripts.
 
-goalAchievedForSample = function( data, muNULL, effROPE, effHDImaxWid, muROPE,
+goalAchievedForSample_2g = function( data, muNULL, effROPE, effHDImaxWid, muROPE,
                                   mcmcLength=10000, yName = 'y', gName = 'cond') {
   # Generate the MCMC chain:
   mcmcCoda = genMCMC( datFrm = data , numSavedSteps=mcmcLength , saveName=NULL, yName = yName, gName = gName )
@@ -676,7 +690,7 @@ goalAchievedForSample = function( data, muNULL, effROPE, effHDImaxWid, muROPE,
   return(goalAchieved)
 }
 
-powerEstimation = function( mcmcChain, N, muNULL, muROPE,
+powerEstimation_2g = function( mcmcChain, N, muNULL, muROPE,
                             effROPE, effHDImaxWid, 
                             mcmcLength=20000, nRep=1000 , 
                             saveName=NULL, recover=0, yName="y", gName="cond", groupNames) {
@@ -791,4 +805,145 @@ powerEstimation = function( mcmcChain, N, muNULL, muROPE,
   }
   # Save the result:
   writeLines( result_text , con=paste(saveName, "PowerResult.txt", sep="") )
+}
+
+goalAchievedForSample = function( data, muNULL, effROPE, effHDImaxWid,
+                                  mcmcLength=10000, yName = yName, gName = gName) {
+  # Generate the MCMC chain:
+  mcmcCoda = genMCMC( datFrm = data , numSavedSteps=mcmcLength , saveName=NULL, yName = yName, gName = gName )
+  mcmcMat = as.matrix(mcmcCoda,chains=TRUE)
+  # Calculate effect size:
+  mcmcMatEff = ( mcmcMat[,"mu"] - muNULL ) / mcmcMat[,"sigma"]
+  
+  # Check goal achievement. First, compute the HDI of the effect size:
+  effHDI = HDIofMCMC( mcmcMatEff )
+  
+  # Define list for recording results:
+  goalAchieved = list()
+  
+  # All the goals are related to the effect size posterior distribution.
+  # Goal 1: Exclude ROPE around null value:
+  goalAchieved = c( goalAchieved , 
+                    "ExcludeROPE"=( effHDI[1] > effROPE[2] 
+                                    | effHDI[2] < effROPE[1] ) )
+  
+  # Goal 2: HDI less than max width:
+  goalAchieved = c( goalAchieved , 
+                    "NarrowHDI"=( effHDI[2]-effHDI[1] < effHDImaxWid ) )
+  
+  # Goal 3: HDI all above the ROPE around null value:
+  goalAchieved = c( goalAchieved , 
+                    "HDIaboveROPE"=( effHDI[1] > effROPE[2] ) )
+  
+  # Return list of goal results:
+  return(goalAchieved)
+}
+powerEstimation = function( mcmcChain, N, muNULL, 
+                            effROPE, effHDImaxWid, 
+                            mcmcLength=10000, nRep=1000 , 
+                            saveName=NULL, recover=0, yName="y", gName="cond", groupNames = 1) {
+  # Description of arguments:
+  #   - mcmcChain is a matrix with a MCMC chain.
+  #   - N is the sample size.
+  #   - muNULL is the mean null value.
+  #   - effROPE is a two element vector, such as c(-1,1), specifying the limit
+  #     of the ROPE on the effect size.
+  #   - effHDImaxWid is the maximum desired width of the 95% HDI on the effect size.
+  #   - numSavedSteps is the number of steps in the chains generated with simulated data.
+  #   - nRep is the number of simulated experiments used to estimate the power.
+  #   - saveName, if set, is the path to save the power analysis data.
+  #   - recover indicates if data should be recovered (1) or not (0).
+  
+  # Select thinned steps in chain for posterior predictions:
+  # We select nRep steps in the MCMC chain to generate simulated data for the 
+  # power analysis. The steps are selected evenly from across the entire chain.
+  chainLength = NROW( mcmcChain )
+  stepIdxVec = seq( 1 , chainLength , floor(chainLength/nRep) )
+
+  
+  # For each selected step of the chain, we get the parameter values, create 
+  # a simulated data set, run bayesian estimation to obtain the posterior 
+  # distributions and then we check if the goals were achieved or not.
+  nSim = 0
+  splitted = strsplit(saveName, "/")
+  savePath = ""
+  
+  for (i in 1:(length(splitted[[1]]) - 1)) {
+    savePath = paste0(savePath, splitted[[1]][i], "/")
+  }
+  
+  simPath = paste0(savePath, "mcmc_sims","_", yName)
+  dir.create(simPath, showWarnings = FALSE, recursive = TRUE)
+  
+  if (recover == 1) {
+    load( paste(saveName, "Power.Rdata", sep="") )
+    nSim = nrow(goalTally)
+  }
+  while (nSim < length(stepIdxVec) ) {
+    #for ( stepIdx in stepIdxVec ) {
+    nSim = nSim + 1
+    stepIdx = stepIdxVec[nSim]
+    cat( "\n:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::\n" )
+    cat( paste( "Power computation: Simulated Experiment" , nSim , "of" , 
+                length(stepIdxVec) , ":\n\n" ) )
+    yName = "RMSE"
+    # Get parameter values for this simulation:
+    muVal = mcmcChain[stepIdx,"mu"]
+    sigmaVal = mcmcChain[stepIdx,"sigma"]
+    nuVal = mcmcChain[stepIdx,"nu"]
+    # Generate simulated data:
+    simulatedData = rt( N , df=nuVal ) * sigmaVal + muVal
+    sim_data_list <- data.frame(
+      yName = simulatedData,
+      gName = rep(groupNames,length(simulatedData))
+    )
+    names(sim_data_list)[1] = yName
+    names(sim_data_list)[2] = gName
+
+    #print(sim_data_list)
+    # Do bayesian analysis on simulated data:
+    goalAchieved = goalAchievedForSample( sim_data_list, muNULL, 
+                                          effROPE, effHDImaxWid, mcmcLength, yName = yName, gName = NULL )
+    
+    # Tally the results:
+    # goalTally is a matrix to store the results of each simulated analysis.
+    # It is created after the first iteration to consider the multiple goals
+    # defined inside the goalAchievedForSample function.
+    if (!exists("goalTally")) { # if goalTally does not exist, create it
+      goalTally=matrix( nrow=0 , ncol=length(goalAchieved) ) 
+    }
+    goalTally = rbind( goalTally , goalAchieved )
+    
+    if ( !is.null(saveName) ) {  
+      save( goalTally, file=paste(saveName, "Power.Rdata", sep="") )
+    }
+    
+  }
+  
+  result_text = ""
+  # Now we calculate the proportion that each goal was achieved:
+  # For each goal...
+  for ( goalIdx in 1:NCOL(goalTally) ) {
+    # Extract the goal name for subsequent display:
+    goalName = colnames(goalTally)[goalIdx]
+    # Compute number of successes:
+    goalHits = sum(unlist(goalTally[,goalIdx]))
+    # Compute number of attempts:
+    goalAttempts = NROW(goalTally)
+    # Compute proportion of successes:
+    goalEst = goalHits/goalAttempts
+    # Compute HDI around proportion:
+    goalEstHDI = HDIofICDF( qbeta ,
+                            shape1=1+goalHits , 
+                            shape2=1+goalAttempts-goalHits )
+    # Display the result:
+    powerResult = paste0( goalName,
+                          ": Est.Power=" , round(goalEst,3) , 
+                          "; Low Bound=" , round(goalEstHDI[1],3) ,
+                          "; High Bound=" , round(goalEstHDI[2],3) )
+    show( powerResult )
+    result_text = paste(result_text, powerResult, "\n", sep="")
+  }
+  # Save the result:
+  writeLines( result_text , con=paste0(saveName, "_N", N, "_", yName, "PowerResult.txt", sep="") )
 }

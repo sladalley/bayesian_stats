@@ -1,0 +1,4 @@
+ExcludeROPE: Est.Power=1; Low Bound=0.971; High Bound=1
+NarrowHDI: Est.Power=0; Low Bound=0; High Bound=0.029
+HDIaboveROPE: Est.Power=1; Low Bound=0.971; High Bound=1
+

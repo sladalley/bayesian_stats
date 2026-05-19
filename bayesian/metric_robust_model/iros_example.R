@@ -9,7 +9,7 @@ source("lognormal_functions.R")
 
 # Generating a data set using a uniform distribution just to test the script:
 # Generating a data set using a uniform distribution just to test the script:
-datFrm_full = read.csv(file="iros_data_new_scene.csv")
+datFrm_full = read.csv(file="data_csv/iros_data_7.csv")
 
 
 
@@ -26,7 +26,7 @@ datFrm = subset(datFrm_full,
 # =========================
 
 gName = "Controller"
-yName = "SimTime"
+yName = "RMSE"
 
 g = as.numeric(as.factor(datFrm[,gName]))
 
@@ -42,7 +42,7 @@ if (yName == "SuccessProbability")
       .groups = "drop"
     ) %>%
     group_by(Scene) %>%
-    filter(n() == nG) %>%   # <- key fix
+    filter(n() == nG) %>%   
     ungroup()
 } else {
 
@@ -53,7 +53,7 @@ tab <- datFrm %>%
     .groups = "drop"
   ) %>%
   group_by(Scene) %>%
-  filter(n() == nG) %>%   # <- key fix
+  filter(n() == nG) %>%   
   ungroup()
 
 dat_summary <- datFrm %>%
@@ -80,14 +80,13 @@ datFrm <- as.data.frame(tab)
 
 
 # Defining directory for results and prefix of the files names:
-fileNameRoot = "paired_rmse"
+fileNameRoot = "paired_rmhse"
 dir.create(fileNameRoot)
 fileNameRoot = paste0(fileNameRoot, "/", fileNameRoot)
 graphFileType = "pdf"
 Scenes = unique(datFrm$Scene)
 
 analysis = "paired"
-
 # Choosing type of analysis ("paired" or "independent"):
 
 
@@ -105,6 +104,8 @@ if (analysis == "paired") {
     diff[nrow(diff) + 1,] <- list(y1 - y2, name, Scene)
   }
   datFrm = diff
+  
+  print(diff)
   
   
   # Setting the comparison values and ROPE intervals:
@@ -189,18 +190,18 @@ if (analysis == "independent") {
  
   
   # Generating MCMC chain:
-  codaSamples = genMCMC_lnorm(datFrm, muPrior=muPrior, muSdPrior=muSdPrior, 
+  codaSamples = genMCMC(datFrm, muPrior=muPrior, muSdPrior=muSdPrior, 
                         sigmaPriorLow=sigmaPriorLow, 
                         sigmaPriorHigh=sigmaPriorHigh,
                         saveName=fileNameRoot, yName=yName, gName = gName)
   
   # Summary and diagnostics of the MCMC chain:
-  smryMCMC_lnorm(codaSamples, nG=nG, saveName=fileNameRoot, 
+  smryMCMC(codaSamples, nG=nG, saveName=fileNameRoot, 
            diagnostics=diagnostics, graphFileType=graphFileType, 
            computeEffsz=computeEffsz)
   
   # Plotting the posterior distributions:
-  plotMCMC_lnorm(codaSamples, datFrm, compValMu=compValMu, 
+  plotMCMC(codaSamples, datFrm, compValMu=compValMu, 
            compValMuDiff=compValMuDiff, compValSigma=compValSigma,
            compValSigmaDiff=compValSigmaDiff, compValNu=compValNu, 
            compValEff=compValEff, ropeEffSz=ropeEffSz,ropeSigma = ropeSigma, ropeMu=ropeMu,
