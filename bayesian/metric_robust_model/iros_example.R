@@ -26,7 +26,7 @@ datFrm = subset(datFrm_full,
 # =========================
 
 gName = "Controller"
-yName = "RMSE"
+yName = "SimTime"
 
 g = as.numeric(as.factor(datFrm[,gName]))
 
@@ -80,7 +80,7 @@ datFrm <- as.data.frame(tab)
 
 
 # Defining directory for results and prefix of the files names:
-fileNameRoot = "paired_rmse"
+fileNameRoot = "paired_simtime"
 dir.create(fileNameRoot)
 fileNameRoot = paste0(fileNameRoot, "/", fileNameRoot)
 graphFileType = "pdf"
@@ -92,7 +92,8 @@ summary_stats <- datFrm %>%
   summarise(
     median = median(.data[[yName]], na.rm = TRUE),
     mean   = mean(.data[[yName]], na.rm = TRUE),
-    sd = mean(.data[[yName]], na.rm = TRUE)
+    sd = sd(.data[[yName]], na.rm = TRUE),
+    mad = mad(.data[[yName]], na.rm = TRUE)
   )
 
 
@@ -120,8 +121,10 @@ if (analysis == "paired") {
   summary_stats$diff_mean = mean(datFrm[,yName])
   summary_stats$diff_median = median(datFrm[,yName])
   summary_stats$diff_sd = sd(datFrm[,yName])
+  summary_stats$diff_mad = mad(datFrm[,yName])
   
-  ropeMu = c(-0.1*abs(summary_stats$diff_median[summary_stats$Controller=="QP"]),0.1*abs(summary_stats$diff_median[summary_stats$Controller=="QP"]))
+  ropeMuValue = 0.1*abs(summary_stats$diff_mad[summary_stats$Controller=="QP"])
+  ropeMu = c(-ropeMuValue,ropeMuValue)
   
   
   # Setting the comparison values and ROPE intervals:
