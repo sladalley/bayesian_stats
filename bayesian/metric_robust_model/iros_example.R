@@ -80,16 +80,28 @@ datFrm <- as.data.frame(tab)
 
 
 # Defining directory for results and prefix of the files names:
-fileNameRoot = "paired_rmhse"
+fileNameRoot = "paired_rmse"
 dir.create(fileNameRoot)
 fileNameRoot = paste0(fileNameRoot, "/", fileNameRoot)
 graphFileType = "pdf"
 Scenes = unique(datFrm$Scene)
 
+
+summary_stats <- datFrm %>%
+  group_by(Controller) %>%
+  summarise(
+    median = median(.data[[yName]], na.rm = TRUE),
+    mean   = mean(.data[[yName]], na.rm = TRUE),
+    sd = mean(.data[[yName]], na.rm = TRUE)
+  )
+
+
+
+
+
+
 analysis = "paired"
 # Choosing type of analysis ("paired" or "independent"):
-
-
 name = "FBL-QP - QP"
 # ======= Paired/one-group analysis ===========================================
 if (analysis == "paired") {
@@ -105,11 +117,15 @@ if (analysis == "paired") {
   }
   datFrm = diff
   
-  print(diff)
+  summary_stats$diff_mean = mean(datFrm[,yName])
+  summary_stats$diff_median = median(datFrm[,yName])
+  summary_stats$diff_sd = sd(datFrm[,yName])
+  
+  ropeMu = c(-0.1*abs(summary_stats$diff_median[summary_stats$Controller=="QP"]),0.1*abs(summary_stats$diff_median[summary_stats$Controller=="QP"]))
   
   
   # Setting the comparison values and ROPE intervals:
-  compValMu = 0.0 # comparison value to show in plots of means
+  compValMu = NULL # comparison value to show in plots of means
   compValSigma = NULL # comparison value to show in plots of scales
   compValNu = NULL # comparison value to show in plots of normality
   compValEff = NULL # comparison value to show in plot of effect size
@@ -151,7 +167,7 @@ if (analysis == "paired") {
            compValSigma=compValSigma,
            compValNu=compValNu, 
            compValEff=compValEff, ropeEffSz=ropeEffSz, 
-           graphFileType=graphFileType, saveName=fileNameRoot, 
+           graphFileType=graphFileType, saveName=fileNameRoot, ropeMu=ropeMu,
            yName=yName, gName = gName,
            subscript=subscript, subsEffsz=subsEffsz, plotEffsz=computeEffsz)
 }
@@ -173,6 +189,10 @@ if (analysis == "independent") {
   groupNames = c("FBL-QP","QP") # names of the groups
   subscript = "" # subscript to identify measured variable
   subsEffsz = "" # subscript to identify the effect size expression
+  
+  MuRopeValue = 0.1*abs(summary_stats$median[summary_stats$Controller == "QP"])
+  
+  ropeMu = c(-MuRopeValue, MuRopeValue)
   
   # Getting number of groups from data:
   g = as.numeric(as.factor(datFrm[,gName]))
@@ -209,5 +229,5 @@ if (analysis == "independent") {
            groupNames=groupNames, yName=yName, gName = gName,
            subscript=subscript, subsEffsz=subsEffsz, plotEffsz=computeEffsz)
 }
-
+save(summary_stats, file = paste0(fileNameRoot, "_summary_stats.RData"))
 # =============================================================================

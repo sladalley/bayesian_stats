@@ -339,14 +339,14 @@ plotMCMC = function( codaSamples, datFrm, yName="y", gName="cond",
     muLim = range( mcmcMat[, grep("^mu",colnames(mcmcMat)) ] )
     sigmaLim = range( mcmcMat[, grep("^sigma",colnames(mcmcMat)) ] )
     if (subscript != "") {
-      plotPost( mcmcMat[,"mu"] , xlab=TeX(sprintf("$\\mu_{%s}$", subscript)) , xlim=muLim , 
+      plotPost( mcmcMat[,"mu"] , xlab=TeX(sprintf("$\\mu_{%s}$", subscript)) , xlim=muLim , ROPE=ropeMu,
                 compVal=compValMu , cex=cex_plotPost , col="#0088aa8a")
-      plotPost( mcmcMat[,"sigma"] , xlab=TeX(sprintf("$\\tau_{%s}$", subscript)) , xlim=sigmaLim , 
+      plotPost( mcmcMat[,"sigma"] , xlab=TeX(sprintf("$\\tau_{%s}$", subscript)) , xlim=sigmaLim,
                 compVal=compValSigma , cex=cex_plotPost , col="#0088aa8a")
     } else {
-      plotPost( mcmcMat[,"mu"] , xlab=TeX(sprintf("$\\mu$")) , xlim=muLim , 
+      plotPost( mcmcMat[,"mu"] , xlab=TeX(sprintf("$\\mu$")) , xlim=muLim , ROPE=ropeMu,
                 compVal=compValMu , cex=cex_plotPost , col="#0088aa8a")
-      plotPost( mcmcMat[,"sigma"] , xlab=TeX(sprintf("$\\tau$")) , xlim=sigmaLim , 
+      plotPost( mcmcMat[,"sigma"] , xlab=TeX(sprintf("$\\tau$")) , xlim=sigmaLim,
                 compVal=compValSigma , cex=cex_plotPost , col="#0088aa8a")
     }
   }
@@ -807,39 +807,51 @@ powerEstimation_2g = function( mcmcChain, N, muNULL, muROPE,
   writeLines( result_text , con=paste(saveName, "PowerResult.txt", sep="") )
 }
 
-goalAchievedForSample = function( data, muNULL, effROPE, effHDImaxWid,
+goalAchievedForSample = function( data, muNULL, effROPE, effHDImaxWid, MuHDImaxWid,
                                   mcmcLength=10000, yName = yName, gName = gName) {
   # Generate the MCMC chain:
   mcmcCoda = genMCMC( datFrm = data , numSavedSteps=mcmcLength , saveName=NULL, yName = yName, gName = gName )
   mcmcMat = as.matrix(mcmcCoda,chains=TRUE)
   # Calculate effect size:
   mcmcMatEff = ( mcmcMat[,"mu"] - muNULL ) / mcmcMat[,"sigma"]
+  mcmcMatMu = mcmcMat[,"mu"]
+  
+
   
   # Check goal achievement. First, compute the HDI of the effect size:
   effHDI = HDIofMCMC( mcmcMatEff )
+  MuHDI = HDIofMCMC( mcmcMatMu )
   
   # Define list for recording results:
   goalAchieved = list()
   
   # All the goals are related to the effect size posterior distribution.
   # Goal 1: Exclude ROPE around null value:
-  goalAchieved = c( goalAchieved , 
-                    "ExcludeROPE"=( effHDI[1] > effROPE[2] 
-                                    | effHDI[2] < effROPE[1] ) )
+  # goalAchieved = c( goalAchieved , 
+  #                   "ExcludeROPE"=( effHDI[1] > effROPE[2] 
+  #                                   | effHDI[2] < effROPE[1] ) )
   
   # Goal 2: HDI less than max width:
   goalAchieved = c( goalAchieved , 
-                    "NarrowHDI"=( effHDI[2]-effHDI[1] < effHDImaxWid ) )
+                    "NarrowEffHDI"=( effHDI[2]-effHDI[1] < effHDImaxWid ) )
+  # 
+  # # Goal 3: HDI all above the ROPE around null value:
+  # goalAchieved = c( goalAchieved , 
+  #                   "HDIaboveROPE"=( effHDI[1] > effROPE[2] ) )
   
-  # Goal 3: HDI all above the ROPE around null value:
+  # Goal 4: HDI of Mu below width
   goalAchieved = c( goalAchieved , 
-                    "HDIaboveROPE"=( effHDI[1] > effROPE[2] ) )
+                    "NarrowMuHDI"=( MuHDI[2]-MuHDI[1] < effHDImaxWid ) )
+
+  # Goal 7: HDI of Mu below width
+  goalAchieved = c( goalAchieved , 
+                    "NarrowMuHDI80Rope"=( MuHDI[2]-MuHDI[1] < MuHDImaxWid ) )
   
   # Return list of goal results:
   return(goalAchieved)
 }
 powerEstimation = function( mcmcChain, N, muNULL, 
-                            effROPE, effHDImaxWid, 
+                            effROPE, effHDImaxWid, MuHDImaxWid,
                             mcmcLength=10000, nRep=1000 , 
                             saveName=NULL, recover=0, yName="y", gName="cond", groupNames = 1) {
   # Description of arguments:
@@ -874,9 +886,8 @@ powerEstimation = function( mcmcChain, N, muNULL,
   
   simPath = paste0(savePath, "mcmc_sims","_", yName)
   dir.create(simPath, showWarnings = FALSE, recursive = TRUE)
-  
   if (recover == 1) {
-    load( paste(saveName, "Power.Rdata", sep="") )
+    load( paste0(saveName, "_N", N, "_", yName, "_Power.Rdata") )
     nSim = nrow(goalTally)
   }
   while (nSim < length(stepIdxVec) ) {
@@ -886,7 +897,6 @@ powerEstimation = function( mcmcChain, N, muNULL,
     cat( "\n:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::\n" )
     cat( paste( "Power computation: Simulated Experiment" , nSim , "of" , 
                 length(stepIdxVec) , ":\n\n" ) )
-    yName = "RMSE"
     # Get parameter values for this simulation:
     muVal = mcmcChain[stepIdx,"mu"]
     sigmaVal = mcmcChain[stepIdx,"sigma"]
@@ -903,7 +913,7 @@ powerEstimation = function( mcmcChain, N, muNULL,
     #print(sim_data_list)
     # Do bayesian analysis on simulated data:
     goalAchieved = goalAchievedForSample( sim_data_list, muNULL, 
-                                          effROPE, effHDImaxWid, mcmcLength, yName = yName, gName = NULL )
+                                          effROPE, effHDImaxWid, MuHDImaxWid, mcmcLength, yName = yName, gName = NULL )
     
     # Tally the results:
     # goalTally is a matrix to store the results of each simulated analysis.
@@ -915,7 +925,7 @@ powerEstimation = function( mcmcChain, N, muNULL,
     goalTally = rbind( goalTally , goalAchieved )
     
     if ( !is.null(saveName) ) {  
-      save( goalTally, file=paste(saveName, "Power.Rdata", sep="") )
+      save( goalTally, file = paste0(saveName, "_N", N, "_", yName, "_Power.Rdata") )
     }
     
   }

@@ -158,7 +158,14 @@ plot_violins = function(
   # ------------------------------------------------------
   # Create the plot
   # ------------------------------------------------------
+  rope_text <- if (!is.null(rope_label) && rope_label != "") {
+    rope_label
+  } else {
+    fmt3(rope_size)
+  }
   
+  label_pos <- paste0(ref_label, " (+", rope_text, ")")
+  label_neg <- paste0(ref_label, " (-", rope_text, ")")
   # Add the violins
   p <- ggplot(df, aes(x = label, y = value)) +
     geom_violin(trim = FALSE, fill = violin_fill, colour = "black") +
@@ -220,16 +227,7 @@ plot_violins = function(
       "text",
       x = Rope_label_pos,
       y = ref_height,
-      label = paste0(
-        ref_label,
-        " (+",
-        if (!is.null(rope_label) && rope_label != "") {
-          rope_label
-        } else {
-          fmt3(rope_size)
-        },
-        ")"
-      ),
+      label = label_pos,
       colour = "darkred",
       hjust = Rope_label_just,
       vjust = -0.5,
@@ -239,16 +237,7 @@ plot_violins = function(
       "text",
       x = Rope_label_pos,
       y = -ref_height,
-      label = paste0(
-        ref_label,
-        " (-",
-        if (!is.null(rope_label) && rope_label != "") {
-          rope_label
-        } else {
-          fmt3(rope_size)
-        },
-        ")"
-      ),
+      label = label_neg,
       colour = "darkred",
       hjust = Rope_label_just,
       vjust = 1.5,
@@ -358,72 +347,96 @@ plot_violins = function(
 # It works by loading the data in, calculating the difference in means,
 # constructing the data frame, and then calling the function.
 
-# Load the data in
-#load("Violin_Plot_Example/Wall_Walking-Corrected Contact Changes-RHCP_2-Bimodal-codaSamples.RData")
-load("iros_test_t_rmse/iros_test_t_rmse-Mcmc.Rdata")
+# # Load the data in
+# #load("Violin_Plot_Example/Wall_Walking-Corrected Contact Changes-RHCP_2-Bimodal-codaSamples.RData")
+# load("iros_test_t_rmse/iros_test_t_rmse-Mcmc.Rdata")
+# rmse <- codaSamples
+# mcmcMatList_rmse = as.matrix(rmse,chains=TRUE)
+# 
+# 
+#  load("iros_test_beta_ce_test/iros_test_beta_ce_test-Mcmc.Rdata")
+#  ce <- codaSamples
+#  mcmcMatList_ce = as.matrix(ce,chains=TRUE)
+# # 
+# # 
+#  load("iros_test_beta_st_test/iros_test_beta_st_test-Mcmc.Rdata")
+#  st <- codaSamples
+#  mcmcMatList_st = as.matrix(st,chains=TRUE)
+# 
+# datFrm = read.csv(file="iros_data_6.csv")
+# 
+# # Keep only successful runs
+# datFrm = subset(datFrm, 
+#                 Solved == 1 & 
+#                   IsStable == 1 & 
+#                   ConstraintsOK == 1 & SimTime <=300)
+# 
+# 
+# 
+# 
+# y_rmse = as.numeric(datFrm[,"RMSE"])
+# 
+# y_controleffort = as.numeric(datFrm[,"ControlEffort"])
+# y_ce_median = median(y_controleffort)
+# res_ce = normalise_data(y_controleffort)
+# y_controleffort= res_ce$x_norm
+# 
+# 
+# 
+# y_simtime = (as.numeric(datFrm[,"SimTime"]))
+# y_st_median = median(y_simtime)
+# res_st = normalise_data(y_simtime)
+# y_simtime =res_st$x_norm
+# 
+# gName = "Controller"
+# # Getting number of groups from data:
+# g = as.numeric(as.factor(datFrm[,gName]))
+# nG = max(g) # number of groups
+# 
+# rope_rmse = 0.05*mean(y_rmse[ g==2 ])
+# rope_ce = 0.05*((y_ce_median - res_ce$y_min) / (res_ce$y_max - res_ce$y_min))
+# rope_st = 0.05*((y_st_median - res_st$y_min) / (res_st$y_max - res_st$y_min))
+# 
+# 
+# so_qp_rmse = mcmcMatList_rmse[, "mu[2]"]
+# fbl_qp_rmse = mcmcMatList_rmse[, "mu[1]"]
+# 
+# so_qp_ce = (mcmcMatList_ce[,"alpha[2]"]/(mcmcMatList_ce[,"alpha[2]"]+mcmcMatList_ce[,"beta[2]"]))
+# fbl_qp_ce = (mcmcMatList_ce[,"alpha[1]"]/(mcmcMatList_ce[,"alpha[1]"]+mcmcMatList_ce[,"beta[1]"]))
+# 
+# 
+# so_qp_st = (mcmcMatList_st[,"alpha[2]"]/(mcmcMatList_st[,"alpha[2]"]+mcmcMatList_st[,"beta[2]"]))
+# fbl_qp_st = (mcmcMatList_st[,"alpha[1]"]/(mcmcMatList_st[,"alpha[1]"]+mcmcMatList_st[,"beta[1]"]))
+
+
+load("paired_rmse/paired_rmse-Mcmc.Rdata")
 rmse <- codaSamples
-mcmcMatList_rmse = as.matrix(rmse,chains=TRUE)
+mcmcMat_rmse = as.matrix(rmse,chains=TRUE)
 
 
- load("iros_test_beta_ce_test/iros_test_beta_ce_test-Mcmc.Rdata")
- ce <- codaSamples
- mcmcMatList_ce = as.matrix(ce,chains=TRUE)
-# 
-# 
- load("iros_test_beta_st_test/iros_test_beta_st_test-Mcmc.Rdata")
- st <- codaSamples
- mcmcMatList_st = as.matrix(st,chains=TRUE)
+load("paired_controleffort/paired_controleffort-Mcmc.Rdata")
+ce <- codaSamples
+mcmcMat_ce = as.matrix(ce,chains=TRUE)
 
-datFrm = read.csv(file="iros_data_6.csv")
+load("paired_simtime/paired_simtime-Mcmc.Rdata")
+st <- codaSamples
+mcmcMat_st = as.matrix(st,chains=TRUE)
 
-# Keep only successful runs
-datFrm = subset(datFrm, 
-                Solved == 1 & 
-                  IsStable == 1 & 
-                  ConstraintsOK == 1 & SimTime <=300)
+load("paired_simtime/paired_simtime_summary_stats.RData")
+st_median = 0.1*abs(summary_stats$diff_median[summary_stats$Controller=="QP"])
 
+load("paired_rmse/paired_rmse_summary_stats.RData")
+rmse_median = 0.1*abs(summary_stats$diff_median[summary_stats$Controller=="QP"])
 
-
-
-y_rmse = as.numeric(datFrm[,"RMSE"])
-
-y_controleffort = as.numeric(datFrm[,"ControlEffort"])
-y_ce_median = median(y_controleffort)
-res_ce = normalise_data(y_controleffort)
-y_controleffort= res_ce$x_norm
-
-
-
-y_simtime = (as.numeric(datFrm[,"SimTime"]))
-y_st_median = median(y_simtime)
-res_st = normalise_data(y_simtime)
-y_simtime =res_st$x_norm
-
-gName = "Controller"
-# Getting number of groups from data:
-g = as.numeric(as.factor(datFrm[,gName]))
-nG = max(g) # number of groups
-
-rope_rmse = 0.05*mean(y_rmse[ g==2 ])
-rope_ce = 0.05*((y_ce_median - res_ce$y_min) / (res_ce$y_max - res_ce$y_min))
-rope_st = 0.05*((y_st_median - res_st$y_min) / (res_st$y_max - res_st$y_min))
-
-
-so_qp_rmse = mcmcMatList_rmse[, "mu[2]"]
-fbl_qp_rmse = mcmcMatList_rmse[, "mu[1]"]
-
-so_qp_ce = (mcmcMatList_ce[,"alpha[2]"]/(mcmcMatList_ce[,"alpha[2]"]+mcmcMatList_ce[,"beta[2]"]))
-fbl_qp_ce = (mcmcMatList_ce[,"alpha[1]"]/(mcmcMatList_ce[,"alpha[1]"]+mcmcMatList_ce[,"beta[1]"]))
-
-
-so_qp_st = (mcmcMatList_st[,"alpha[2]"]/(mcmcMatList_st[,"alpha[2]"]+mcmcMatList_st[,"beta[2]"]))
-fbl_qp_st = (mcmcMatList_st[,"alpha[1]"]/(mcmcMatList_st[,"alpha[1]"]+mcmcMatList_st[,"beta[1]"]))
-
+load("paired_controleffort/paired_controleffort_summary_stats.RData")
+ce_median = 0.1*abs(summary_stats$diff_median[summary_stats$Controller=="QP"])
 
 # Calculate difference in means
-mean_diff_rmse = fbl_qp_rmse - so_qp_rmse
-mean_diff_st = fbl_qp_st - so_qp_st
-mean_diff_ce = fbl_qp_ce - so_qp_ce
+mean_diff_rmse = mcmcMat_rmse[,"mu"]
+mean_diff_st = mcmcMat_st[,"mu"]
+mean_diff_ce = mcmcMat_ce[,"mu"]
+
+
 #print(mean_diff)
 
 
@@ -463,30 +476,31 @@ ce_df <- rbind(
   )
 )
 
-print(rope_rmse)
+
 groupNames=c("FBL-QP", "QP")
-x_axis_label = xlab=TeX(sprintf("$\\mu_{%s} - \\mu_{%s}$", groupNames[1],  groupNames[2]))
+x_axis_label = xlab=TeX(sprintf("$\\mu_{diff}"))
+x_axis_label_md = xlab=TeX(sprintf("$Md_{diff}"))
 # Call the function
 p_rmse = plot_violins(rmse_df, # data frame
              getwd(), # save directory (the working directory)
              plot_title = "RMSE",
              "p_rmse", y_axis_label = " ",
              x_axis_label = x_axis_label,
-             rope_size = rope_rmse, rope_label = "5%") # ROPE 
+             rope_size = rmse_median, rope_label = "10%") # ROPE 
 
 p_st = plot_violins(st_df, # data frame
                       getwd(), # save directory (the working directory)
                       plot_title = "Simulation Time",
                       "p_st", y_axis_label = " ",
-                      x_axis_label = x_axis_label,
-                      rope_size = rope_st, rope_label = "5%") # ROPE 
+                      x_axis_label = x_axis_label_md,
+                      rope_size = st_median, rope_label = "10%") # ROPE 
 
 p_ce= plot_violins(ce_df, # data frame
                       getwd(), # save directory (the working directory)
                       plot_title = "Control Effort",
                       "p_ce", y_axis_label = " ",
                       x_axis_label = x_axis_label,
-                      rope_size = rope_ce, rope_label = "5%") # ROPE 
+                      rope_size = ce_median, rope_label = "10%") # ROPE 
 
 
 combined <- p_rmse | p_ce | p_st
